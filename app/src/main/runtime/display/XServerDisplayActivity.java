@@ -24,6 +24,7 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.InputDevice;
+import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.PointerIcon;
@@ -10661,6 +10662,13 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (isSteamControllerShadowEvent(event.getDevice())) return true;
         // A held guide button repeats; only a fresh press may close the menu it opened.
+		if (event.getAction() == KeyEvent.ACTION_MULTIPLE) {
+			String characters = event.getCharacters();
+			if (characters != null && !characters.isEmpty()) {
+				sendTextToWine(characters);
+				return true;
+			}
+		}
         boolean freshKey = event.getKeyCode() != KeyEvent.KEYCODE_BUTTON_MODE || event.getRepeatCount() == 0;
         if (ExternalController.isGameController(event.getDevice())
                 && handleControllerMenuKey(event.getKeyCode(), event.getAction() == KeyEvent.ACTION_DOWN && freshKey, event.getEventTime())) return true;
@@ -10729,6 +10737,31 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
         }
 
         return super.dispatchKeyEvent(event);
+    }
+
+    private void sendTextToWine(String text) {
+    	if (xServer == null || xServer.keyboard == null) return;
+    	KeyCharacterMap keyCharacterMap = null;
+    	int length = text.length();
+    	int i = 0;
+    	while (i < length) {
+    		int codePoint = text.codePointAt(i);
+    		int charCount = Character.charCount(codePoint);
+    		if (codePoint > 127) {
+    			xServer.keyboard.injectUnicodeChar(codePoint);
+    		} else {
+    			if (keyCharacterMap == null) {
+    				keyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
+    			}
+    			KeyEvent[] events = keyCharacterMap.getEvents(new char[]{(char) codePoint});
+    			if (events != null) {
+    				for (KeyEvent ke : events) {
+    					xServer.keyboard.onKeyEvent(ke);
+    				}
+    			}
+    		}
+    		i += charCount;
+    	}
     }
 
     private boolean handleControllerMenuKey(int kc, boolean down, long eventTime) {

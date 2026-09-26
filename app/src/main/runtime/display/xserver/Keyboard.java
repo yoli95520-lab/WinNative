@@ -10,6 +10,10 @@ public class Keyboard {
   public static final short KEYS_COUNT = 248;
   public static final short MAX_KEYCODE = 255;
   public static final short MIN_KEYCODE = 8;
+  private static final XKeycode[] IME_KEYS = {
+  	XKeycode.KEY_IME, XKeycode.KEY_IME1, XKeycode.KEY_IME2
+  };
+  private int imeSlot = 0;
   public final int[] keysyms = new int[KEYS_COUNT];
   private final Bitmask modifiersMask = new Bitmask();
   private final XKeycode[] keycodeMap = createKeycodeMap();
@@ -21,6 +25,18 @@ public class Keyboard {
     void onKeyPress(byte keycode, int keysym);
 
     void onKeyRelease(byte keycode);
+  }
+
+  public void injectUnicodeChar(int codePoint) {
+  	XKeycode key = IME_KEYS[imeSlot % IME_KEYS.length];
+  	imeSlot++;
+  	xServer.injectKeyPress(key, 0x01000000 + codePoint);
+  	try {
+  		Thread.sleep(10);
+  	} catch (InterruptedException e) {
+  		Thread.currentThread().interrupt();
+  	}
+  	xServer.injectKeyRelease(key);
   }
 
   public Keyboard(XServer xServer) {
