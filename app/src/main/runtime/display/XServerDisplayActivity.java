@@ -1892,46 +1892,31 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
 	/**
      * 弹出中文输入框
      */
-    private void showChineseInputDialog() {
-    	android.widget.EditText input = new android.widget.EditText(this);
-    	input.setHint("输入中文文本...");
-    	input.setSingleLine(true);
-    	input.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEND);
-
-    	android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
-    		.setView(input)
-    		.setNegativeButton("取消", null)
-    		.create();
-
-    	input.setOnEditorActionListener((v, actionId, event) -> {
-    		boolean isSendAction = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND
-    							|| actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE
-    							|| actionId == android.view.inputmethod.EditorInfo.IME_NULL;
-			boolean isEnterKeyPressed = (event != null
-									&& event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
-									&& event.getAction() == android.view.KeyEvent.ACTION_DOWN);
-
-			if (isSendAction || isEnterKeyPressed) {
-				String text = input.getText().toString();
-				if (!text.isEmpty()) {
-					sendTextToGameViaClipboard(text);
-				}
-				dialog.dismiss();
-				return true;
-			}
-			return false;
-    	});
-
-    	dialog.setOnShowListener(dialogInterface -> {
-    		input.requestFocus();
-    		android.view.inputmethod.InputMethodManager imm =
-    			(android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-    		if (imm != null) {
-    			imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
-    		}
-    	});
-    	dialog.show();
-    }
+	public void showChineseInputDialog() {
+		runOnUiThread(() -> {
+			EditText input = new EditText(this);
+            input.setHint("输入中文文本...");
+            input.setSingleLine(true);
+            
+            AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(input)
+				.setPositiveButton("发送", (d, which) -> {
+					String text = input.getText().toString();
+					if (!text.isEmpty()) {
+						sendTextToGameViaClipboard(text);
+					}
+				})
+                .setNegativeButton("取消", null)
+                .create();
+            
+            dialog.show();
+            input.requestFocus();
+            InputMethodManager manager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (manager != null) {
+                manager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+            }
+		});
+	}
 
 	/**
      * 写入剪贴板并延迟模拟按键 Ctrl + V
@@ -1939,20 +1924,24 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
     private void sendTextToGameViaClipboard(String text) {
     	ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
     	if (clipboard != null) {
-    		ClipData clip = ClipData.newPlainText("test", text);
-    		clipboard.setPrimaryClip(clip);
+			clipboard.setPrimaryClip(ClipData.newPlainText("text", text));
     	}
 
     	//Toast.makeText(this, "正在注入到游戏...", Toast.LENGTH_SHORT).show();
-
-    	new Handler(Looper.getMainLooper()).postDelayed(() -> {
+		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT));
+    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_V));
+    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_V));
+    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT));
+    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
+    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+    	/*new Handler(Looper.getMainLooper()).postDelayed(() -> {
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_V));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_V));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-    	}, 100);
+    	}, 100);*/
     }
 
     /**
@@ -1975,20 +1964,16 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
      */
     private void addInputOverlayButton() {
     	runOnUiThread(() -> {
-    		Button overlayBtn = new Button(this);
-    		overlayBtn.setPadding(0, 0, 0, 0);
+    		Button overlayBtn = new Button(this);   		
     		overlayBtn.setText("T");
     		overlayBtn.setTextColor(Color.WHITE);
     		overlayBtn.setTextSize(14);
     		overlayBtn.setBackgroundColor(Color.parseColor("#80222222"));
 
-    		FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(110, 110);
-    		params.gravity = Gravity.TOP | Gravity.END;
-    		params.topMargin = 120;
-    		params.rightMargin = 40;
-
+    		FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(110, 110, Gravity.TOP | Gravity.END);
+			params.setMargins(0, 120, 40, 0);
+    		
     		overlayBtn.setOnClickListener(v -> showChineseInputDialog());
-
     		addContentView(overlayBtn, params);
     	});
     }
