@@ -1908,25 +1908,22 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
 				})
                 .setNegativeButton("取消", null)
                 .create();
-            
-            dialog.show();
-            input.requestFocus();
-            InputMethodManager manager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-            if (manager != null) {
-                manager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
-            }
+			if (dialog.getWindow() != null) {
+				dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+			}
+			input.requestFocus();
+			dialog.show();
 		});
 	}
 
 	/**
-     * 写入剪贴板并延迟模拟按键 Ctrl + V
+     * 写入剪贴板并模拟按键 Ctrl + V + Enter
      */
     private void sendTextToGameViaClipboard(String text) {
-    	ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+    	ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
     	if (clipboard != null) {
 			clipboard.setPrimaryClip(ClipData.newPlainText("text", text));
     	}
-
     	//Toast.makeText(this, "正在注入到游戏...", Toast.LENGTH_SHORT).show();
 		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT));
     	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_V));
@@ -1951,11 +1948,9 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
     	if (winHandler != null) {
     		winHandler.onKeyEvent(event);
     	}
-
     	if (xServer != null && xServer.keyboard != null) {
     		xServer.keyboard.onKeyEvent(event);
     	}
-
     	super.dispatchKeyEvent(event);
     }
 
