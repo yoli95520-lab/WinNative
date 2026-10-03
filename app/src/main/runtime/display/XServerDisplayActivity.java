@@ -1925,20 +1925,14 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
 			clipboard.setPrimaryClip(ClipData.newPlainText("text", text));
     	}
     	//Toast.makeText(this, "正在注入到游戏...", Toast.LENGTH_SHORT).show();
-		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT));
-    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_V));
-    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_V));
-    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT));
-    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
-    	dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-    	/*new Handler(Looper.getMainLooper()).postDelayed(() -> {
+    	new Handler(Looper.getMainLooper()).postDelayed(() -> {
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_V));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_V));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
     		dispatchCustomKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-    	}, 100);*/
+    	}, 100);
     }
 
     /**
