@@ -102,6 +102,12 @@ public enum XKeycode {
   KEY_NEXT(117),
   KEY_INSERT(118),
   KEY_DEL(119),
+  KEY_IME0(120),
+  KEY_IME1(121),
+  KEY_IME2(122),
+  KEY_IME3(123),
+  KEY_IME4(124),
+  KEY_IME5(125),
   KEY_MAX(KEY_DEL.id);
   public final byte id;
 

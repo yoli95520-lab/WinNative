@@ -4,6 +4,9 @@ import android.view.KeyEvent;
 import androidx.collection.ArraySet;
 import com.winlator.cmod.runtime.input.controls.ExternalController;
 import java.util.ArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class Keyboard {
   public static final byte KEYSYMS_PER_KEYCODE = 2;
@@ -17,6 +20,18 @@ public class Keyboard {
   private final ArrayList<OnKeyboardListener> onKeyboardListeners = new ArrayList<>();
   private final XServer xServer;
 
+  private static final XKeycode[] IME_KEYS = {
+    XKeycode.KEY_IME0,
+    XKeycode.KEY_IME1,
+    XKeycode.KEY_IME2,
+    XKeycode.KEY_IME3,
+    XKeycode.KEY_IME4,
+    XKeycode.KEY_IME5
+  };
+  private volatile int imeSlot = 0;
+
+  private final ThreadPoolExecutor imeExecutor = createImeExecutor();
+
   public interface OnKeyboardListener {
     void onKeyPress(byte keycode, int keysym);
 
@@ -29,6 +44,38 @@ public class Keyboard {
 
   public Bitmask getModifiersMask() {
     return modifiersMask;
+  }
+
+  private static ThreadPoolExecutor createImeExecutor() {
+  	ThreadPoolExecutor executor = new ThreadPoolExecutor(
+   	  1, 1, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
+   	    Thread thread = new Thread(r, "Keyboard-ime");
+   	    thread.setDaemon(true);
+   	    return thread;
+   	    });
+   	  executor.allowCoreThreadTimeOut(true);
+   	  return executor;
+  }
+
+  public void sendTextToWine(String text) {
+    if (text == null || text.isEmpty() || xServer == null) return;
+
+	imeExecutor.execute(() -> {
+	  for (int cp : text.codePoints().toArray()) {
+	    XKeycode key = IME_KEYS[imeSlot];
+		imeSlot = (imeSlot + 1) % IME_KEYS.length;
+
+		xServer.injectKeyPress(key, (cp <= 0xFF) ? cp : (0x01000000 | cp));
+		try {
+			Thread.sleep(10);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return;
+		} finally {
+			xServer.injectKeyRelease(key);
+		}
+	  }
+	});
   }
 
   public void setKeysyms(byte keycode, int minKeysym, int majKeysym) {

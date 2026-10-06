@@ -2,6 +2,9 @@ package com.winlator.cmod.runtime.display;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ShortcutManager;
@@ -9,6 +12,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -23,6 +27,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -31,8 +36,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -1882,6 +1890,96 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
         }, "XServerSwitchCleanup").start();
     }
 
+    /**
+     * 添加半透明悬浮按钮
+     */
+    private void addInputOverlayButton() {
+    	runOnUiThread(() -> {
+    		Button overlayBtn = new Button(this);   		
+    		overlayBtn.setText("T");
+    		overlayBtn.setTextColor(Color.WHITE);
+    		overlayBtn.setTextSize(14);
+    		overlayBtn.setBackgroundColor(Color.parseColor("#80222222"));
+
+    		FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(110, 110, Gravity.TOP | Gravity.END);
+			params.setMargins(0, 120, 40, 0);
+
+    		overlayBtn.setOnClickListener(v -> showChineseInputDialog());
+    		addContentView(overlayBtn, params);
+    	});
+    }
+
+    /**
+     * 弹出输入框
+     */    
+	public void showChineseInputDialog() {
+		runOnUiThread(() -> {
+			LinearLayout layout = new LinearLayout(this);
+			layout.setOrientation(LinearLayout.VERTICAL);
+			int p = (int) (16 * getResources().getDisplayMetrics().density);
+			layout.setPadding(p, p / 2, p, 0);
+			
+			EditText input = new EditText(this);
+            input.setHint("输入文本...");
+            input.setSingleLine(true);
+            layout.addView(input);
+
+            CheckBox cbCopyPaste = new CheckBox(this);
+            cbCopyPaste.setText("Wayland");
+            //cbCopyPaste.setTextSize(12);
+            layout.addView(cbCopyPaste);
+
+            new AlertDialog.Builder(this)
+            	.setTitle("🎮 中文文本注入")
+            	.setView(layout)
+				.setPositiveButton("发送", (d, which) -> {
+					String text = input.getText().toString();
+					if (!text.isEmpty()) {
+						if (cbCopyPaste.isChecked()) {
+							WaylandCompositor.setClipboardText(text);
+							sendCtrlVAndEnter();
+						} else {
+							xServer.keyboard.sendTextToWine(text);							
+						}
+					}
+				})
+                .setNegativeButton("取消", null)
+                .show();
+		});
+	}
+
+	/**
+     * 模拟按键 Ctrl + V + Enter
+     */
+    private void sendCtrlVAndEnter() {
+    	new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+    	dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT));
+    	dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_V));
+    	dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_V));
+    	dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT));
+
+    	dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
+    	dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+    	}, 100);
+    }
+    private void sendTextToGameViaClipboard(String text) {
+    	if (text == null || text.isEmpty()) return;
+
+   		ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+   		if (clipboard != null) {
+   			clipboard.setPrimaryClip(ClipData.newPlainText("text", text));
+		}
+
+    	new Handler(Looper.getMainLooper()).postDelayed(() -> {
+    		dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT));
+  			dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_V));
+    		dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_V));
+    		dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT));
+ 			dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
+    		dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+    	}, 100);
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         if (savedInstanceState != null) isPaused = savedInstanceState.getBoolean("isPaused", false);
@@ -1937,6 +2035,8 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
 
         ControllerManager.getInstance().init(this);
         registerControllerAutoHideListener();
+
+        addInputOverlayButton();
 
         preloaderDialog = new PreloaderDialog(this);
 
@@ -10690,6 +10790,15 @@ public class XServerDisplayActivity extends FixedFontScaleAppCompatActivity
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (isSteamControllerShadowEvent(event.getDevice())) return true;
+
+        /*if (event.getAction() == KeyEvent.ACTION_MULTIPLE) {
+        	String characters = event.getCharacters();
+        	if (characters != null && !characters.isEmpty()) {
+        		xServer.keyboard.sendTextToWine(characters);
+        		return true;
+        	}
+        }*/
+
         // A held guide button repeats; only a fresh press may close the menu it opened.
         boolean freshKey = event.getKeyCode() != KeyEvent.KEYCODE_BUTTON_MODE || event.getRepeatCount() == 0;
         if (ExternalController.isGameController(event.getDevice())
