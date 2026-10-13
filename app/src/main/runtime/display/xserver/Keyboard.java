@@ -47,8 +47,6 @@ public class Keyboard {
     return modifiersMask;
   }
 
-  private final ThreadPoolExecutor imeExecutor = createImeExecutor();
-
   private static ThreadPoolExecutor createImeExecutor() {
   	ThreadPoolExecutor executor = new ThreadPoolExecutor(
    	  1, 1, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
